@@ -14,8 +14,14 @@
 
 package main
 
+/*
+	Experimental micro service app to handle package store
+*/
+
 import (
+	"github.com/corestoreio/csfw/backend"
 	"github.com/corestoreio/csfw/config"
+	"github.com/corestoreio/csfw/net"
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/store"
 	"github.com/corestoreio/csfw/utils/log"
@@ -48,6 +54,10 @@ func main() {
 	}
 
 	e := echo.New()
+
+	e.SetHTTPErrorHandler(net.RESTErrorHandler)
+
+	e.Use(backend.JWTVerify(dbc.NewSession()))
 
 	//	e.Use(mw.Logger())
 	//e.Use(mw.Recover())
