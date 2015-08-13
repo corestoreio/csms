@@ -19,7 +19,6 @@ package main
 */
 
 import (
-	"github.com/corestoreio/csfw/backend"
 	"github.com/corestoreio/csfw/config"
 	"github.com/corestoreio/csfw/net"
 	"github.com/corestoreio/csfw/storage/csdb"
@@ -57,7 +56,7 @@ func main() {
 
 	e.SetHTTPErrorHandler(net.RESTErrorHandler)
 
-	e.Use(backend.JWTVerify(dbc.NewSession()))
+	e.Use(user.JWTVerify(dbc.NewSession()))
 
 	//	e.Use(mw.Logger())
 	//e.Use(mw.Recover())
