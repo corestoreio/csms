@@ -19,6 +19,9 @@ package main
 */
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/corestoreio/csfw/config"
 	"github.com/corestoreio/csfw/net"
 	"github.com/corestoreio/csfw/storage/csdb"
@@ -26,6 +29,7 @@ import (
 	"github.com/corestoreio/csfw/user/userjwt"
 	"github.com/corestoreio/csfw/utils/log"
 	"github.com/labstack/echo"
+	"github.com/pborman/uuid"
 )
 
 const ServerAddress = "127.0.0.1:3010"
@@ -60,17 +64,39 @@ func main() {
 		log.Fatal("userjwt.New", "err", err)
 	}
 
-	e.Use(jwtMng.Authenticate)
+	eg1 := e.Group(net.APIRoute.String(), jwtMng.Authenticate)
 
 	//	e.Use(mw.Logger())
 	//e.Use(mw.Recover())
 	//	e.SetDebug(true)
 
-	e.Get(store.RouteStores, store.RESTStores(sm))
-	//	hr.POST(store.RouteStores, store.RESTStoreCreate)
-	//	hr.GET(store.RouteStore, store.RESTStore)
-	//	hr.PUT(store.RouteStore, store.RESTStoreSave)
-	//	hr.DELETE(store.RouteStore, store.RESTStoreDelete)
+	eg1.Get(store.RouteStores, store.RESTStores(sm))
+	//	eg1.POST(store.RouteStores, store.RESTStoreCreate)
+	//	eg1.GET(store.RouteStore, store.RESTStore)
+	//	eg1.PUT(store.RouteStore, store.RESTStoreSave)
+	//	eg1.DELETE(store.RouteStore, store.RESTStoreDelete)
+
+	e.Get("/login", routeLogin(jwtMng))
+
 	println("Starting server @ ", ServerAddress)
 	e.Run(ServerAddress)
+}
+
+// just hacked into it. @todo: auth from admin_user table and role checking
+func routeLogin(jm *userjwt.AuthManager) echo.HandlerFunc {
+
+	staticClaims := map[string]interface{}{
+		"xfoo":  "bar",
+		"xbuzz": uuid.New(),
+		"xtime": time.Now().Unix(),
+	}
+
+	return func(c *echo.Context) error {
+		ts, _, err := jm.GenerateToken(staticClaims)
+		if err != nil {
+			return err
+		}
+
+		return c.String(http.StatusOK, ts)
+	}
 }
