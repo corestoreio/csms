@@ -23,6 +23,7 @@ import (
 	"github.com/corestoreio/csfw/net"
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/store"
+	"github.com/corestoreio/csfw/user/userjwt"
 	"github.com/corestoreio/csfw/utils/log"
 	"github.com/labstack/echo"
 )
@@ -47,16 +48,19 @@ func main() {
 	sm := store.NewManager(
 		store.NewStorageOption(),
 	)
-
 	if err := sm.ReInit(dbc.NewSession()); err != nil {
 		log.Fatal("sm.ReInit(dbc.NewSession())", "err", err)
 	}
 
 	e := echo.New()
-
 	e.SetHTTPErrorHandler(net.RESTErrorHandler)
 
-	e.Use(user.JWTVerify(dbc.NewSession()))
+	jwtMng, err := userjwt.New()
+	if err != nil {
+		log.Fatal("userjwt.New", "err", err)
+	}
+
+	e.Use(jwtMng.Authenticate)
 
 	//	e.Use(mw.Logger())
 	//e.Use(mw.Recover())
