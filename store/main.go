@@ -70,7 +70,7 @@ func setupAuth(e *echo.Echo) *echo.Group {
 	}
 	jwtMng.EnableJTI = true
 	e.Get("/login", routeLogin(jwtMng))
-	return e.Group(net.APIRoute.String(), jwtMng.Authenticate)
+	return e.Group(net.APIRoute.String(), jwtMng.Authorization)
 
 }
 
