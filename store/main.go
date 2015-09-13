@@ -16,6 +16,8 @@ package main
 
 /*
 	Experimental micro service app to handle package store
+
+	Use github.com/vdobler/ht for testing
 */
 
 import (
