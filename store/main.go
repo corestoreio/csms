@@ -23,7 +23,6 @@ import (
 	"github.com/corestoreio/csfw/config"
 	"github.com/corestoreio/csfw/config/scope"
 	"github.com/corestoreio/csfw/net/ctxjwt"
-	"github.com/corestoreio/csfw/net/httputils"
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/storage/dbr"
 	"github.com/corestoreio/csfw/store"
@@ -68,7 +67,7 @@ func newApp() *app {
 	}
 
 	// load config data from core_config_data SQL table
-	if err := config.DefaultManager.ApplyCoreConfigData(a.dbc.NewSession()); err != nil {
+	if err := config.DefaultService.ApplyCoreConfigData(a.dbc.NewSession()); err != nil {
 		log.Fatal("config.DefaultManager.ApplyCoreConfigData", "err", err)
 	}
 
