@@ -15,6 +15,7 @@
 package main
 
 //	Experimental micro service app to handle package store
+// TODO: Add example for github.com/ebay/fabio
 
 import (
 	"net/http"
@@ -22,13 +23,15 @@ import (
 
 	"github.com/corestoreio/csfw/config"
 	"github.com/corestoreio/csfw/config/scope"
+	"github.com/corestoreio/csfw/net/ctxhttp"
 	"github.com/corestoreio/csfw/net/ctxjwt"
+	"github.com/corestoreio/csfw/net/ctxrouter"
+	"github.com/corestoreio/csfw/net/httputils"
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/storage/dbr"
 	"github.com/corestoreio/csfw/store"
 	"github.com/corestoreio/csfw/utils/log"
-	"github.com/labstack/echo"
-	mw "github.com/labstack/echo/middleware"
+	"golang.org/x/net/context"
 )
 
 const ServerAddress = "127.0.0.1:3010"
@@ -44,9 +47,9 @@ func init() {
 }
 
 type app struct {
-	dbc      *dbr.Connection
-	jwtSrv   *ctxjwt.Service
-	storeSrv *store.Service
+	dbc    *dbr.Connection
+	config *config.Service
+	jwtSrv *ctxjwt.Service
 }
 
 // newApp creates a new application. function can only be called once
@@ -66,23 +69,13 @@ func newApp() *app {
 		log.Fatal("store.TableCollection.Init", "err", err)
 	}
 
-	// load config data from core_config_data SQL table
-	if err := config.DefaultService.ApplyCoreConfigData(a.dbc.NewSession()); err != nil {
-		log.Fatal("config.DefaultManager.ApplyCoreConfigData", "err", err)
-	}
+	a.config = config.NewService(config.WithDBStorage(a.dbc.DB))
 
 	// create JSON web token instance
 	if a.jwtSrv, err = ctxjwt.NewService(); err != nil {
 		log.Fatal("ctxjwt.NewService", "err", err)
 	}
 	a.jwtSrv.EnableJTI = true
-
-	if a.storeSrv, err = store.NewService(
-		scope.Option{Website: scope.MockID(1)}, // run website ID 1, see database table
-		store.MustNewStorage(store.WithDatabaseInit(a.dbc.NewSession())),
-	); err != nil {
-		log.Fatal("store.NewService", "err", err)
-	}
 
 	return a
 }
@@ -93,47 +86,78 @@ func (a *app) close() {
 	}
 }
 
-func (a *app) routeLogin(e *echo.Echo) {
+func (a *app) routeLogin(rtr *ctxrouter.Router) {
 
 	staticClaims := map[string]interface{}{
 		"xfoo":  "bar",
 		"xtime": time.Now().Unix(),
 	}
 
-	e.Get("/login", func(c *echo.Context) error {
+	rtr.GET("/login", func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 		ts, _, err := a.jwtSrv.GenerateToken(staticClaims)
 		if err != nil {
 			return err
 		}
-		return c.String(http.StatusOK, ts)
+		return httputils.NewPrinter(w, r).StringByte(http.StatusOK, ts)
 	})
 }
 
-func (a *app) setupStoreRoutes(e *echo.Echo) {
+func (a *app) setupStoreRoutes(rtr *ctxrouter.Router) {
 
 	//	eg1 := e.Group(httputils.APIRoute.String(), a.jwtSrv.WithParseAndValidate())
+
+	path := httputils.APIRoute.String() + store.RouteStores
+
+	rtr.Handler("GET", path,
+		ctxhttp.Chain(jsonStores(), a.jwtSrv.WithParseAndValidate()),
+	)
 
 	//	eg1.Get(store.RouteStores, store.RESTStores(sm))
 	//	eg1.POST(store.RouteStores, store.RESTStoreCreate)
 	//	eg1.GET(store.RouteStore, store.RESTStore)
 	//	eg1.PUT(store.RouteStore, store.RESTStoreSave)
 	//	eg1.DELETE(store.RouteStore, store.RESTStoreDelete)
+}
 
+func jsonStores() ctxhttp.Handler {
+	return ctxhttp.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+
+		storeReader, _, err := store.FromContextReader(ctx)
+		if err != nil {
+			return err
+		}
+
+		stores, err := storeReader.Stores()
+		if err != nil {
+			// todo better error handling with status codes
+			//				http.Error(w, err.Error(), http.StatusInternalServerError)
+			return err
+		}
+
+		return httputils.NewPrinter(w, r).JSON(http.StatusOK, stores)
+	})
 }
 
 func main() {
 	a := newApp()
 	defer a.close() // @todo check signal and close gracefully
 
-	e := echo.New()
+	ctx := context.Background()
+	ctx = store.NewContextReader(
+		ctx,
+		store.MustNewService(
+			scope.Option{Website: scope.MockID(1)}, // run website ID 1, see database table
+			store.MustNewStorage(store.WithDatabaseInit(a.dbc.NewSession())),
+		),
+	)
+	ctx = config.NewContextGetter(ctx, a.config)
 
-	e.Use(mw.Logger())
-	//e.Use(mw.Recover())
-	//	e.SetDebug(true)
-
-	a.routeLogin(e)
-	a.setupStoreRoutes(e)
+	router := ctxrouter.New(ctx)
+	a.routeLogin(router)
+	a.setupStoreRoutes(router)
 
 	println("Starting server @ ", ServerAddress)
-	e.Run(ServerAddress)
+
+	log.Fatal("ListenAndServe", "err", http.ListenAndServe(ServerAddress, router))
+
 }
