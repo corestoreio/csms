@@ -98,7 +98,7 @@ func (a *app) routeLogin(rtr *ctxrouter.Router) {
 		if err != nil {
 			return err
 		}
-		return httputils.NewPrinter(w, r).StringByte(http.StatusOK, ts)
+		return httputils.NewPrinter(w, r).WriteString(http.StatusOK, ts)
 	})
 }
 
@@ -109,7 +109,7 @@ func (a *app) setupStoreRoutes(rtr *ctxrouter.Router) {
 	path := httputils.APIRoute.String() + store.RouteStores
 
 	rtr.Handler("GET", path,
-		ctxhttp.Chain(jsonStores(), a.jwtSrv.WithParseAndValidate()),
+		ctxhttp.Chain(jsonStores, a.jwtSrv.WithParseAndValidate()),
 	)
 
 	//	eg1.Get(store.RouteStores, store.RESTStores(sm))
@@ -119,42 +119,40 @@ func (a *app) setupStoreRoutes(rtr *ctxrouter.Router) {
 	//	eg1.DELETE(store.RouteStore, store.RESTStoreDelete)
 }
 
-func jsonStores() ctxhttp.Handler {
-	return ctxhttp.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func jsonStores(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
-		storeReader, _, err := store.FromContextReader(ctx)
-		if err != nil {
-			return err
-		}
+	storeReader, _, err := store.FromContextReader(ctx)
+	if err != nil {
+		return err
+	}
 
-		stores, err := storeReader.Stores()
-		if err != nil {
-			// todo better error handling with status codes
-			//				http.Error(w, err.Error(), http.StatusInternalServerError)
-			return err
-		}
-
-		return httputils.NewPrinter(w, r).JSON(http.StatusOK, stores)
-	})
+	stores, err := storeReader.Stores()
+	if err != nil {
+		// todo better error handling with status codes
+		//				http.Error(w, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	return httputils.NewPrinter(w, r).JSON(http.StatusOK, stores)
 }
 
 func main() {
 	a := newApp()
 	defer a.close() // @todo check signal and close gracefully
 
-	ctx := context.Background()
-	ctx = store.NewContextReader(
-		ctx,
-		store.MustNewService(
-			scope.Option{Website: scope.MockID(1)}, // run website ID 1, see database table
-			store.MustNewStorage(store.WithDatabaseInit(a.dbc.NewSession())),
-		),
+	ctx := store.WithContextMustService(
+		scope.Option{Website: scope.MockID(1)}, // run website ID 1, see database table, like Mage::run('code','store')
+		store.MustNewStorage(store.WithDatabaseInit(a.dbc.NewSession())),
 	)
-	ctx = config.NewContextGetter(ctx, a.config)
+
+	ctx = config.WithContextGetter(ctx, a.config)
 
 	router := ctxrouter.New(ctx)
 	a.routeLogin(router)
 	a.setupStoreRoutes(router)
+
+	router.Handle("GET", "/error", func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+		return store.ErrContextServiceNotFound
+	})
 
 	println("Starting server @ ", ServerAddress)
 
