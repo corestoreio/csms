@@ -123,14 +123,12 @@ func jsonStores(ctx context.Context, w http.ResponseWriter, r *http.Request) err
 
 	storeReader, _, err := store.FromContextReader(ctx)
 	if err != nil {
-		return err
+		return err // default StatusInternalServerError
 	}
 
 	stores, err := storeReader.Stores()
 	if err != nil {
-		// todo better error handling with status codes
-		//				http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
+		return ctxhttp.NewErrorFromErrors(http.StatusInternalServerError, err)
 	}
 	return httputils.NewPrinter(w, r).JSON(http.StatusOK, stores)
 }
