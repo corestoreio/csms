@@ -30,7 +30,7 @@ import (
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/storage/dbr"
 	"github.com/corestoreio/csfw/store"
-	"github.com/corestoreio/csfw/utils/log"
+	"github.com/corestoreio/csfw/util/log"
 	"golang.org/x/net/context"
 )
 
