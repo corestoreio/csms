@@ -26,7 +26,7 @@ import (
 	"github.com/corestoreio/csfw/net/ctxhttp"
 	"github.com/corestoreio/csfw/net/ctxjwt"
 	"github.com/corestoreio/csfw/net/ctxrouter"
-	"github.com/corestoreio/csfw/net/httputils"
+	"github.com/corestoreio/csfw/net/httputil"
 	"github.com/corestoreio/csfw/storage/csdb"
 	"github.com/corestoreio/csfw/storage/dbr"
 	"github.com/corestoreio/csfw/store"
@@ -98,7 +98,7 @@ func (a *app) routeLogin(rtr *ctxrouter.Router) {
 		if err != nil {
 			return err
 		}
-		return httputils.NewPrinter(w, r).WriteString(http.StatusOK, ts)
+		return httputil.NewPrinter(w, r).WriteString(http.StatusOK, ts)
 	})
 }
 
@@ -106,7 +106,7 @@ func (a *app) setupStoreRoutes(rtr *ctxrouter.Router) {
 
 	//	eg1 := e.Group(httputils.APIRoute.String(), a.jwtSrv.WithParseAndValidate())
 
-	path := httputils.APIRoute.String() + store.RouteStores
+	path := httputil.APIRoute.String() + store.RouteStores
 
 	rtr.Handler("GET", path,
 		ctxhttp.Chain(jsonStores, a.jwtSrv.WithParseAndValidate()),
@@ -130,7 +130,7 @@ func jsonStores(ctx context.Context, w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return ctxhttp.NewErrorFromErrors(http.StatusInternalServerError, err)
 	}
-	return httputils.NewPrinter(w, r).JSON(http.StatusOK, stores)
+	return httputil.NewPrinter(w, r).JSON(http.StatusOK, stores)
 }
 
 func main() {
