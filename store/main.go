@@ -37,8 +37,8 @@ import (
 const ServerAddress = "127.0.0.1:3010"
 
 func init() {
-	log.PkgLog = log.NewStdLogger(
-		log.SetStdLevel(log.StdLevelInfo),
+	log.PkgLog = log.NewStdLog(
+		log.WithStdLevel(log.StdLevelInfo),
 	)
 	store.PkgLog = log.PkgLog
 	config.PkgLog = log.PkgLog
