@@ -2,13 +2,13 @@
 
 A full running skeleton to use CoreStore as a service-oriented architecture SOA aka "microservice". 
 
-Based on the ideas of [gokit](https://github.com/go-kit/kit).
+Based on the ideas of [gokit](https://github.com/go-kit/kit) or micro. (Review that)
 
 eCommerce apps written in [GoLang](http://golang.org) based on Magento's database structure. 
 
 Compatible to Magento 1 and 2.
 
-For more details: [http://corestore.io](http://corestore.io)
+For more details: [https://corestore.io](https://corestore.io)
 
 Magento is a trademark of [MAGENTO, INC.](http://www.magentocommerce.com/license/).
 
@@ -25,4 +25,4 @@ CoreStore is licensed under the Apache License, Version 2.0. See
 
 ## Copyright
 
-[Cyrill Schumacher](http://cyrillschumacher.com) - [PGP Key](https://keybase.io/cyrill)
+[Cyrill Schumacher](https://cyrillschumacher.com) - [PGP Key](https://keybase.io/cyrill)
